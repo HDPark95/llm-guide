@@ -1,0 +1,48 @@
+name: Build PDF
+
+on:
+  push:
+    paths:
+      - 'presentation.md'
+      - '.github/workflows/build-pdf.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Marp CLI
+        run: npm install -g @marp-team/marp-cli
+
+      - name: Build PDF
+        run: |
+          npx @marp-team/marp-cli presentation.md --pdf --allow-local-files
+          npx @marp-team/marp-cli presentation.md --pptx --allow-local-files
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: presentation-files
+          path: |
+            presentation.pdf
+            presentation.pptx
+
+      - name: Commit PDF to repository
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add presentation.pdf presentation.pptx
+          git diff --staged --quiet || git commit -m "docs: auto-generate PDF and PPTX from presentation"
+          git push
